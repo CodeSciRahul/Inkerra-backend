@@ -2,6 +2,7 @@ import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import Sqlite3 from "sqlite3";
 import env from "dotenv";
+import { v4 as uuidv4 } from 'uuid';
 
 const sqlite3 = Sqlite3.verbose();
 env.config();
@@ -12,6 +13,7 @@ export const signupService = async (req, res) => {
 
   const saltRounds = 10;
   const db = new sqlite3.Database("./blog.db");
+  const O_id = uuidv4()
 
   try {
     // Check if all required fields are provided
@@ -48,13 +50,13 @@ export const signupService = async (req, res) => {
     // Save the new user in the database
     const newUserId = await new Promise((resolve, reject) => {
       db.run(
-        "INSERT INTO users (userName, email, password) VALUES (?, ?, ?)",
-        [userName, email, hashedPassword],
+        "INSERT INTO users (id, userName, email, password) VALUES (?, ?, ?, ?)",
+        [O_id, userName, email, hashedPassword],
         function (err) {
           if (err) {
             reject(err); // Error while inserting data
           } else {
-            resolve(this.lastID); // Return the ID of the inserted row
+            resolve(O_id); // Return the ID of the inserted row
           }
         }
       );
@@ -83,6 +85,8 @@ export const signupService = async (req, res) => {
       },
     });
   } catch (error) {
+    console.log(error);
+
     return res.status(500).json({
       message: "An error occurred",
       error: error.message,
@@ -105,7 +109,6 @@ export const loginService = async (req, res) => {
         resolve(row);
       });
     });
-
     if (!isUser) {
       return res
         .status(404)
