@@ -1,4 +1,5 @@
 import Sqlite3 from "sqlite3";
+import { v4 as uuidv4 } from 'uuid';
 
 const sqlite3 = Sqlite3.verbose();
 
@@ -8,6 +9,9 @@ const db = new sqlite3.Database("./blog.db");
 export const postBlog = async (req, res) => {
     try {
       const user_id = req.params.user_id;
+      const O_id = uuidv4();
+      console.log("string uniqe id from crud",O_id);
+
       const { title, content } = req.body;
   
       // Check if title and content are provided
@@ -18,8 +22,8 @@ export const postBlog = async (req, res) => {
       // Insert the new blog post
       const newPostId = await new Promise((resolve, reject) => {
         db.run(
-          "INSERT INTO posts (user_id, title, content) VALUES (?, ?, ?)",
-          [user_id, title, content],
+          "INSERT INTO posts (id, user_id, title, content) VALUES (?, ?, ?, ?)",
+          [O_id, user_id, title, content],
           function (err) {
             if (err) {
               reject(err);  // Handle the error
