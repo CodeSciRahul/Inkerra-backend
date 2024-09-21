@@ -66,36 +66,44 @@ export const postBlog = async (req, res) => {
 
 // Retrieve all blog posts.
 export const getAllBlog = async (req, res) => {
-    try {
-      const posts = await new Promise((resolve, reject) => {
-        db.all("SELECT * FROM posts", (err, rows) => {
-          if (err) {
-            reject(err);
-          } else {
-            resolve(rows);
-          }
-        });
+  try {
+    const postsWithUsers = await new Promise((resolve, reject) => {
+      // Query to join 'posts' and 'users' tables
+      const query = `
+        SELECT posts. *, users.userName, users.email 
+        FROM posts
+        INNER JOIN users ON posts.user_id = users.id
+      `;
+      
+      db.all(query, (err, rows) => {
+        if (err) {
+          reject(err);
+        } else {
+          resolve(rows);
+        }
       });
-  
-      if (!posts || posts.length === 0) {
-        return res.status(404).send({
-          message: "No posts found",
-          data: [],
-        });
-      }
-  
-      return res.status(200).send({
-        message: "All posts retrieved successfully",
-        data: posts,
-      });
-    } catch (error) {
-      return res.status(500).send({
-        message: "Internal server error",
-        error: error?.message,
-        data: null,
+    });
+
+    if (!postsWithUsers || postsWithUsers.length === 0) {
+      return res.status(404).send({
+        message: "No posts found",
+        data: [],
       });
     }
+
+    return res.status(200).send({
+      message: "All posts with user info retrieved successfully",
+      data: postsWithUsers,
+    });
+  } catch (error) {
+    return res.status(500).send({
+      message: "Internal server error",
+      error: error?.message,
+      data: null,
+    });
+  }
 };
+
   
 
 //Retrieve all  blog for specific user
