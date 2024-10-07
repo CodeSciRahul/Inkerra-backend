@@ -12,7 +12,7 @@ export const checkToken = async(req,res,next) => {
         req.user = decode
         next()
     } catch (error) {
-        res.status(401).json({ message: 'User not authenticated' });
+        res.status(401).json({ message: 'Invalied or Expire token' });
     }
 
 }

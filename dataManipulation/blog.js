@@ -13,7 +13,16 @@ export const getUser = async(payload) => {
        else resolve(row)
      })
    }) 
+
+   const blogs = await new Promise((resolve, reject) => {
+    db.get(`SELECT * FROM posts WHERE user_id = ?`, [user_id], (err,row) => {
+       if(err) reject(err);
+      else resolve([row])
+    })
+  }) 
+
    if(!user) throw new Error("user not found");
    delete user.password
-   return user;
+   return {
+    user, blogs};
 }

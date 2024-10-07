@@ -4,9 +4,10 @@ const crudservice = new crudService();
 
 export const getSingleUserController = async(req,res) => {
     try {
-        const user = await crudservice.getuserService(req.params);
+        const {user, blogs} = await crudservice.getuserService(req.params);
         return res.status(200).send({
             data: user,
+            posts: blogs,
             message: "user detail get successfully"
         })
     } catch (error) {
