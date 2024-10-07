@@ -4,13 +4,13 @@ import { v4 as uuidv4 } from 'uuid';
 const sqlite3 = Sqlite3.verbose();
 
 const db = new sqlite3.Database("./blog.db");
+import { getUser } from "../dataManipulation/blog.js";
 
 // Create a new blog post.
 export const postBlog = async (req, res) => {
     try {
       const user_id = req.params.user_id;
       const O_id = uuidv4();
-      console.log("string uniqe id from crud",O_id);
 
       const { title, content } = req.body;
   
@@ -287,3 +287,14 @@ export const updateBlog = async (req, res) => {
       });
     }
 };
+
+
+
+export class crudService{
+  getuserService = async(payload) => {
+    const user = await getUser(payload);
+
+    if(user === "user not found") throw new Error("user not found");
+    return user;
+  }
+}
