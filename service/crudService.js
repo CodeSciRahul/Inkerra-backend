@@ -291,10 +291,11 @@ export const updateBlog = async (req, res) => {
 
 
 export class crudService{
-  getuserService = async(payload) => {
-    const user = await getUser(payload);
 
+  getuserService = async(payload) => {
+    const {user, blogs} = await getUser(payload);
     if(user === "user not found") throw new Error("user not found");
-    return user;
+    return {user, blogs};
   }
+
 }
