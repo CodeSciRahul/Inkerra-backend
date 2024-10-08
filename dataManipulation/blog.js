@@ -17,7 +17,7 @@ export const getUser = async(payload) => {
    const blogs = await new Promise((resolve, reject) => {
     db.all(`SELECT * FROM posts WHERE user_id = ?`, [user_id], (err,row) => {
        if(err) reject(err);
-      else resolve([row])
+      else resolve(row)
     })
   }) 
 
