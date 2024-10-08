@@ -32,9 +32,9 @@ const db = new sqlite3.Database("./blog.db", (err) => {
   if (err) return console.error("error from data base", err);
 });
 
-//since posts table already created in which user_id does not exist that is why we first drop the exist table and then recreate
-db.run(`DROP TABLE IF EXISTS posts`);
-db.run(`DROP TABLE IF EXISTS users`);
+// //since posts table already created in which user_id does not exist that is why we first drop the exist table and then recreate
+// db.run(`DROP TABLE IF EXISTS posts`);
+// db.run(`DROP TABLE IF EXISTS users`);
 
 //table for posts(CRUD) operation
 db.run(`CREATE TABLE IF NOT EXISTS posts (

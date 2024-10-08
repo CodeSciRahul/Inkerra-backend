@@ -145,7 +145,7 @@ export const singleBlogByUserAndBlogId = async (req, res) => {
     
         const post = await new Promise((resolve, reject) => {
           db.get(
-            "SELECT * FROM posts WHERE user_id = ? AND id = ?", 
+          ` SELECT * FROM posts WHERE user_id = ? AND id = ? `, 
             [user_id, blog_id],
             (err, row) => {
               if (err) {
@@ -156,7 +156,22 @@ export const singleBlogByUserAndBlogId = async (req, res) => {
             }
           );
         });
-    
+
+        const user = await new Promise((resolve, reject) => {
+          db.get(
+          ` SELECT * FROM users WHERE id = ?`, 
+            [user_id],
+            (err, row) => {
+              if (err) {
+                reject(err);  
+              } else {
+                resolve(row); 
+              }
+            }
+          );
+        });
+        delete user.password
+
         if (!post) {
           return res.status(404).send({
             message: "Post not found for the given user and blog id",
@@ -166,6 +181,7 @@ export const singleBlogByUserAndBlogId = async (req, res) => {
         return res.status(200).send({
           message: "Blog retrieved successfully",
           data: post,
+          user: user,
         });
       } catch (error) {
         return res.status(500).send({
