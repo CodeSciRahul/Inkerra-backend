@@ -1,4 +1,4 @@
-import { crudService } from "../service/crudService.js";
+import { crudService } from "../service/blogService.js";
 
 const crudservice = new crudService();
 
