@@ -4,26 +4,36 @@ import { v4 as uuidv4 } from 'uuid';
 const sqlite3 = Sqlite3.verbose();
 
 const db = new sqlite3.Database("./blog.db");
+import { getUser } from "../dataManipulation/blog.js";
+import { uploadPicOnAws } from "../util/uploadPicOnAws.js";
 
 // Create a new blog post.
 export const postBlog = async (req, res) => {
     try {
-      const user_id = req.params.user_id;
+      const {id: user_id} = req.user
       const O_id = uuidv4();
-      console.log("string uniqe id from crud",O_id);
+      const file = req.file
 
       const { title, content } = req.body;
   
       // Check if title and content are provided
       if (!(title && content)) {
-        return res.status(400).send({ message: "Title and content are required" });
+        return res.status(400).send({
+          message: "All fields are required"
+        })
+      }
+
+      //upload blog picture on aws
+      let url = null;
+      if(file){
+        url = await uploadPicOnAws(file?.buffer, file.originalname);
       }
   
       // Insert the new blog post
       const newPostId = await new Promise((resolve, reject) => {
         db.run(
-          "INSERT INTO posts (id, user_id, title, content) VALUES (?, ?, ?, ?)",
-          [O_id, user_id, title, content],
+          "INSERT INTO posts (id, user_id, title, content, blog_pic) VALUES (?, ?, ?, ?, ?)",
+          [O_id, user_id, title, content, url],
           function (err) {
             if (err) {
               reject(err);  // Handle the error
@@ -51,7 +61,7 @@ export const postBlog = async (req, res) => {
   
       // Send the full blog post data in the response
       return res.status(201).send({
-        message: "Blog post created successfully",
+        message: "Blog post successfully",
         data: newPost,
       });
   
@@ -145,7 +155,7 @@ export const singleBlogByUserAndBlogId = async (req, res) => {
     
         const post = await new Promise((resolve, reject) => {
           db.get(
-            "SELECT * FROM posts WHERE user_id = ? AND id = ?", 
+          ` SELECT * FROM posts WHERE user_id = ? AND id = ? `, 
             [user_id, blog_id],
             (err, row) => {
               if (err) {
@@ -156,7 +166,22 @@ export const singleBlogByUserAndBlogId = async (req, res) => {
             }
           );
         });
-    
+
+        const user = await new Promise((resolve, reject) => {
+          db.get(
+          ` SELECT * FROM users WHERE id = ?`, 
+            [user_id],
+            (err, row) => {
+              if (err) {
+                reject(err);  
+              } else {
+                resolve(row); 
+              }
+            }
+          );
+        });
+        delete user.password
+
         if (!post) {
           return res.status(404).send({
             message: "Post not found for the given user and blog id",
@@ -166,6 +191,7 @@ export const singleBlogByUserAndBlogId = async (req, res) => {
         return res.status(200).send({
           message: "Blog retrieved successfully",
           data: post,
+          user: user,
         });
       } catch (error) {
         return res.status(500).send({
@@ -179,7 +205,8 @@ export const singleBlogByUserAndBlogId = async (req, res) => {
 //Delete a blog post by ID.
 export const deleteBlogByUserAndBlogId = async (req, res) => {
     try {
-      const { user_id, blog_id } = req.params; 
+      const {id: user_id} = req.user
+      const {blog_id } = req.params; 
   
       const deleteBlog = await new Promise((resolve, reject) => {
         db.run(
@@ -216,7 +243,8 @@ export const deleteBlogByUserAndBlogId = async (req, res) => {
 export const updateBlog = async (req, res) => {
     const db = new sqlite3.Database("./blog.db"); // Ensure you have your database connection
     try {
-      const { user_id, blog_id } = req.params; // Destructure user_id and blog_id from params
+      const {id: user_id} = req.user
+      const { blog_id } = req.params; // Destructure user_id and blog_id from params
       const { title, content } = req.body; // Get title and content from the request body
   
       // Check if at least one of title or content is provided
@@ -287,3 +315,15 @@ export const updateBlog = async (req, res) => {
       });
     }
 };
+
+
+
+export class crudService{
+
+  getuserService = async(payload) => {
+    const {user, blogs} = await getUser(payload);
+    if(user === "user not found") throw new Error("user not found");
+    return {user, blogs};
+  }
+
+}
