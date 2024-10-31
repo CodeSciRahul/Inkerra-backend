@@ -2,53 +2,46 @@ import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import Sqlite3 from "sqlite3";
 import env from "dotenv";
-import { v4 as uuidv4 } from 'uuid';
+import { v4 as uuidv4 } from "uuid";
+import { sendEmail } from "../util/sendEmail.js";
+import password from "secure-random-password";
 
 const sqlite3 = Sqlite3.verbose();
 env.config();
 
-export const signupService = async (req, res) => {
-  const { userName, email, password } = req.body;
-  const secret_key = process.env.SECRET_KEY;
-
-  const saltRounds = 10;
+//save new user
+export const signupService = async (payload) => {
+  const { userName, email, password } = payload;
+  const saltRounds = Number(process.env.Salt_Round);
   const db = new sqlite3.Database("./blog.db");
-  const O_id = uuidv4()
+  const O_id = uuidv4();
 
   try {
-    // Check if all required fields are provided
-    if (!(userName && email && password)) {
-      return res.status(400).json({
-        status: 400,
-        message: "All fields (userName, email, password) are required",
-      });
-    }
+     // Check if all required fields are provided
+  if (!(userName && email && password)) {
+    throw new Error("All field are required");
+  }
 
-    const isExist = await new Promise((resolve, reject) => {
+    // check user exist or not.
+    await new Promise((resolve, reject) => {
       db.get(
         "SELECT * FROM users WHERE email = ? OR userName = ?",
         [email, userName],
         (err, row) => {
-          if (err) {
-            reject(err); // SQL query error
-          } else {
-            resolve(row); // Row will be null if no user exists
-          }
+          if (err) return reject(new Error(err));
+          if (row) return reject(new Error("username or email already exist"));
+          resolve();
         }
       );
     });
 
-    if (isExist) {
-      return res.status(400).json({
-        message: "Username or Email already exists",
-      });
-    }
+    await sendEmail(email, "send verification link");
 
     // Hash the password
     const hashedPassword = await bcrypt.hash(password, saltRounds);
 
     // Save the new user in the database
-    const newUserId = await new Promise((resolve, reject) => {
+    await new Promise((resolve, reject) => {
       db.run(
         "INSERT INTO users (id, userName, email, password) VALUES (?, ?, ?, ?)",
         [O_id, userName, email, hashedPassword],
@@ -61,128 +54,195 @@ export const signupService = async (req, res) => {
         }
       );
     });
-
-    const payload = {
-      id: newUserId.id,
-      userName: newUserId.userName,
-      email: newUserId.email,
-    };
-
-    const token = jwt.sign(
-      payload, // Payload with user ID and email
-      secret_key, // Secret key
-      { expiresIn: "48h" } // Token expiration time
-    );
-
-    // Return a successful response with the token
-    return res.status(201).json({
-      message: "User registered successfully",
-      token: token, // Include the JWT token in the response
-      data: {
-        id: newUserId,
-        userName: userName,
-        email: email,
-      },
-    });
   } catch (error) {
-    console.log(error);
-
-    return res.status(500).json({
-      message: "An error occurred",
-      error: error.message,
-    });
+    if (error === "username or email already exist") throw new Error(error);
+    throw new Error(error?.message || "signup failed");
   } finally {
     db.close(); // Close the database connection
   }
 };
 
-export const loginService = async (req, res) => {
+//login in existing account.
+export const loginService = async (payload) => {
+  const db = new sqlite3.Database("./blog.db");
   try {
-    const db = new sqlite3.Database("./blog.db");
-    const secret_key = process.env.SECRET_KEY;
-    const { password, email } = req.body;
+    const secret_key = process.env.JWT_Secret_key;
+    const { password, email, userName } = payload;
+
+    //check if any field missing
+    if (!(password && (email || userName))) {
+      throw new Error("All fields required");
+    }
 
     // Check if the user exists
     const isUser = await new Promise((resolve, reject) => {
-      db.get("SELECT * FROM users WHERE email = ?", [email], (err, row) => {
-        if (err) reject(err);
-        resolve(row);
-      });
-    });
-    if (!isUser) {
-      return res
-        .status(404)
-        .json({ message: "User with this email or username does not exist" });
-    }
-
-    // Check if the password matches
-    const isMatch = await bcrypt.compare(password, isUser.password);
-    if (!isMatch) {
-      return res.status(401).json({ message: "Incorrect password" });
-    }
-
-    // Generate JWT token
-    const payload = {
-      id: isUser.id,
-      userName: isUser.userName,
-      email: isUser.email,
-    };
-
-    const token = jwt.sign(payload, secret_key, { expiresIn: "48h" });
-
-    return res
-      .status(200)
-      .json({ token, data: payload, message: "login successfully" });
-  } catch (error) {
-    return res
-      .status(500)
-      .json({ error: "An error occurred during login", error });
-  }
-};
-
-export const changePassword = async (req, res) => {
-  try {
-    const db = new sqlite3.Database("./blog.db");
-    const hash = process.env.HASH;
-    const { userName, password } = req.body;
-
-    // Hash the new password
-    const hashedPassword = await bcrypt.hash(password, hash);
-
-    // Update the password in the database
-    const isUpdate = await new Promise((resolve, reject) => {
-      db.run(
-        `UPDATE users SET password = ? WHERE username = ?`,
-        [hashedPassword, userName],
-        function (err) {
-          if (err) {
-            reject(err);
-          } else {
-            // Check if any rows were affected
-            if (this.changes === 0) {
-              resolve(false); // No rows were updated
-            } else {
-              resolve(true); // Row(s) updated successfully
-            }
-          }
+      db.get(
+        "SELECT * FROM users WHERE email = ? OR userName = ?",
+        [email, userName],
+        (err, row) => {
+          if (err) reject(new Error(err));
+          if (!row) return reject(new Error("user not exist"));
+          resolve(row);
         }
       );
     });
 
-    // Check if the update was successful
-    if (!isUpdate) {
-      return res
-        .status(404)
-        .json({ message: "User not found. Enter the correct username." });
+    if (!isUser?.verified) throw new Error("user not verified");
+
+    // Check if the password matches
+    const isMatch = await bcrypt.compare(password, isUser.password);
+    if (!isMatch) {
+      throw new Error("wrong password");
     }
 
-    return res.status(200).json({
-      message: "Password updated successfully",
-    });
+    delete isUser.password;
+
+    // Generate JWT token
+    const Tokenpayload = {
+      id: isUser?.id,
+      email: isUser?.email,
+      userName: isUser?.userName,
+      verified: isUser?.verified
+    };
+    const token = jwt.sign(Tokenpayload, secret_key, { expiresIn: "48h" });
+
+    return { token, isUser };
   } catch (error) {
-    console.error("Error in changePassword:", error);
-    return res
-      .status(500)
-      .json({ error: "An error occurred while updating the password" });
+    if (error === "user not exist") throw new Error(error);
+    throw new Error(error?.message || "login failed");
+  } finally {
+    db.close((err) => {
+      if (err) console.error("Error closing database connection:", err.message);
+    });
+  }
+};
+
+//send verification email.
+export const resendVerificationEmail = async (payload) => {
+  const { email } = payload;
+  if (!email) throw new Error("Email must be provided");
+  try {
+    await sendEmail(email, "send verification link");
+    return;
+  } catch (error) {
+    throw new Error(error?.message || "Resend email failed");
+  }
+};
+
+//verify user.
+export const verifyUser = async (payload) => {
+  const { verification_token } = payload;
+  const emailSecretKey = process.env.Email_Verification_Secret_key;
+  const authSecretKey = process.env.JWT_Secret_key;
+
+  // Check if verification token is provided
+  if (!verification_token)
+    throw new Error("Verification token must be provided");
+
+  const db = new sqlite3.Database("./blog.db");
+
+  try {
+    // Decode the verification token
+    const decode = jwt.verify(verification_token, emailSecretKey);
+
+    // Retrieve user information from the database
+    const userInfo = await new Promise((resolve, reject) => {
+      db.get(
+        `SELECT * FROM users WHERE email = ?`,
+        [decode.receiver_mail],
+        (err, row) => {
+          if (err)
+            return reject(new Error("Database error while fetching user info"));
+          if (!row) return reject(new Error("User not found"));
+          resolve(row);
+        }
+      );
+    });
+
+    // Check if the user is already verified
+    if (userInfo.verified) throw new Error("User already verified");
+
+    // Update the user's verified status
+    const updateVerify = await new Promise((resolve, reject) => {
+      db.run(
+        `UPDATE users SET verified = ? WHERE email = ?`,
+        [1, decode.receiver_mail],
+        function (err) {
+          if (err)
+            return reject(
+              new Error("Database error while updating verification status")
+            );
+          resolve(this.changes > 0);
+        }
+      );
+    });
+
+    if (!updateVerify) throw new Error("Failed to update verification status");
+
+    // Remove sensitive information from userInfo
+    delete userInfo.password;
+    const user = { ...userInfo, verified: 1 };
+    const Tokenpayload = {
+      id: userInfo?.id,
+      email: userInfo?.email,
+      userName: userInfo?.userName,
+      verified: user?.verified
+    }
+
+    // Generate the authentication token
+    const token = jwt.sign(Tokenpayload, authSecretKey, { expiresIn: "48h" });
+
+    return { user, token };
+  } catch (error) {
+    throw new Error(error.message || "Verification failed");
+  } finally {
+    // Close the database connection
+    db.close((err) => {
+      if (err) console.error("Error closing database connection:", err.message);
+    });
+  }
+};
+
+//update password and send random password to user's email.
+export const updatePassword = async (payload) => {
+  const { email } = payload;
+  if (!email) throw new Error("Email must be provided");
+  const db = new Sqlite3.Database("./blog.db");
+  const saltRound = Number(process.env.Salt_Round);
+  try {
+    //check that email registered or not.
+    const isUserExist = await new Promise((resolve, reject) => {
+      db.get(`SELECT * FROM users WHERE email = ?`, [email], (err, row) => {
+        if (err) return reject(err);
+        if (!row) return reject("user not found");
+        resolve(row);
+      });
+    });
+    // Generate a secure random password
+    const randomPassword = password.randomPassword({
+      length: 8,
+      characters: [password.lower, password.upper, password.digits],
+    });
+
+    const encryptPassword = await bcrypt.hash(randomPassword, saltRound);
+    //update on database
+    await new Promise((resolve, reject) => {
+      db.run(
+        `UPDATE users SET password = ? , updated_At = CURRENT_TIMESTAMP WHERE email = ?`,
+        [encryptPassword, email],
+        (err) => {
+          if (err) return reject(err);
+          resolve();
+        }
+      );
+    });
+
+    //send random password to mail
+    await sendEmail(email, randomPassword);
+    return;
+  } catch (error) {
+    console.log("from catch", error);
+    if (error === "user not found") throw new Error(error);
+    throw new Error(error?.message || "Password change failed");
   }
 };
