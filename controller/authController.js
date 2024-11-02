@@ -6,7 +6,7 @@ export const verifyUserController = async (req, res) => {
     const { user, token } = await verifyUser(req.body);
     return res.status(200).send({
       data: user,
-      access_token: token,
+      token,
       message: "User verified successfully"
     });
   } catch (error) {
@@ -84,7 +84,7 @@ export const loginController = async(req,res) => {
     const {isUser, token} = await loginService(req.body)
     return res.status(200).send({
       data: isUser,
-      access_token: token,
+      token,
       message: "login successfull"
     })
   } catch (error) {

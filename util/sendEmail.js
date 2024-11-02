@@ -9,8 +9,8 @@ dotenv.config();
 const APP_PASSWORD = process.env.App_password;
 const SENDER_EMAIL = process.env.Sender_email;
 const FRONTED_URL = process.env.Frontend_url;
-const Secret_key = process.env.Email_Verification_Secret_key
-
+const Secret_key = process.env.Email_Verification_Secret_key;
+console.log("secret key", Secret_key);
 const generateToken = async(RECEIVER_EMAIL) => {
   try {
     const payload = {
@@ -33,7 +33,10 @@ export const sendEmail = async (RECEIVER_EMAIL, purpose) => {
   const paragraph = isSendVerification ? verificationMessage?.PARAGRAPH : passwordChangeMessage?.PARAGRAPH
   const alert = isSendVerification ? verificationMessage?.ALERT : passwordChangeMessage?.ALERT
   try {
-    const token = await generateToken(RECEIVER_EMAIL)
+    let token;
+    if(isSendVerification) {
+      token = await generateToken(RECEIVER_EMAIL);
+    }
     const transport = nodemailer.createTransport({
       service: "gmail",
       auth: {
