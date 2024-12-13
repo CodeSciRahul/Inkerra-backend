@@ -46,7 +46,7 @@ export const sendEmail = async (RECEIVER_EMAIL, purpose) => {
     const command = {
       from: `Inkerra Team <${SENDER_EMAIL}>`,
       to: RECEIVER_EMAIL,
-      subject: "Verification Email",
+      subject: isSendVerification ? "Verification Email" : "Reset Password",
       html: `<!DOCTYPE html>
 <html>
 <head>

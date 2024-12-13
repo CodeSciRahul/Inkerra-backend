@@ -1,5 +1,6 @@
 import Sqlite3 from "sqlite3";
 import { v4 as uuidv4 } from 'uuid';
+import { getPaginationResult } from "../util/pagination.js";
 
 const sqlite3 = Sqlite3.verbose();
 
@@ -10,7 +11,7 @@ import { uploadPicOnAws } from "../util/uploadPicOnAws.js";
 // Create a new blog post.
 export const postBlog = async (req, res) => {
     try {
-      const {id: user_id} = req.user
+      const {userName} = req.user
       const O_id = uuidv4();
       const file = req.file
 
@@ -32,8 +33,8 @@ export const postBlog = async (req, res) => {
       // Insert the new blog post
       const newPostId = await new Promise((resolve, reject) => {
         db.run(
-          "INSERT INTO posts (id, user_id, title, content, blog_pic) VALUES (?, ?, ?, ?, ?)",
-          [O_id, user_id, title, content, url],
+          "INSERT INTO posts (id, userName, title, content, blog_pic) VALUES (?, ?, ?, ?, ?)",
+          [O_id, userName, title, content, url],
           function (err) {
             if (err) {
               reject(err);  // Handle the error
@@ -71,39 +72,23 @@ export const postBlog = async (req, res) => {
         error: error?.message,
       });
     }
-  };
+};
   
 
 // Retrieve all blog posts.
 export const getAllBlog = async (req, res) => {
   try {
-    const postsWithUsers = await new Promise((resolve, reject) => {
-      // Query to join 'posts' and 'users' tables
-      const query = `
-        SELECT posts. *, users.userName, users.email 
-        FROM posts
-        INNER JOIN users ON posts.user_id = users.id
-      `;
-      
-      db.all(query, (err, rows) => {
-        if (err) {
-          reject(err);
-        } else {
-          resolve(rows);
-        }
-      });
-    });
-
-    if (!postsWithUsers || postsWithUsers.length === 0) {
-      return res.status(404).send({
-        message: "No posts found",
-        data: [],
-      });
+    const {pageNo, limit} = req.query
+    console.log("pageNo and limit", pageNo, limit);
+    const {data, pagination} = await getPaginationResult(pageNo, limit)
+    const response = {
+      data,
+      pagination
     }
-
+    
     return res.status(200).send({
       message: "All posts with user info retrieved successfully",
-      data: postsWithUsers,
+      data: response
     });
   } catch (error) {
     return res.status(500).send({
@@ -114,15 +99,13 @@ export const getAllBlog = async (req, res) => {
   }
 };
 
-  
-
 //Retrieve all  blog for specific user
 export const AllBlogoFUser = async (req, res) => {
     try {
-      const user_id = req.params.user_id;
+      const userName = req.params.userName;
   
       const posts = await new Promise((resolve, reject) => {
-        db.all("SELECT * FROM posts WHERE user_id = ?", [user_id], (err, rows) => {  // Use `db.all` to get all rows
+        db.all("SELECT * FROM posts WHERE userName = ?", [userName], (err, rows) => {  // Use `db.all` to get all rows
           if (err) {
             reject(err);
           } else {
@@ -151,12 +134,12 @@ export const AllBlogoFUser = async (req, res) => {
 //reterive single blog for specific user and specific blog by blog id
 export const singleBlogByUserAndBlogId = async (req, res) => {
     try {
-        const { user_id, blog_id } = req.params
+        const { userName, blog_id } = req.params
     
         const post = await new Promise((resolve, reject) => {
           db.get(
-          ` SELECT * FROM posts WHERE user_id = ? AND id = ? `, 
-            [user_id, blog_id],
+          ` SELECT * FROM posts WHERE userName = ? AND id = ? `, 
+            [userName, blog_id],
             (err, row) => {
               if (err) {
                 reject(err);  
@@ -169,8 +152,8 @@ export const singleBlogByUserAndBlogId = async (req, res) => {
 
         const user = await new Promise((resolve, reject) => {
           db.get(
-          ` SELECT * FROM users WHERE id = ?`, 
-            [user_id],
+          ` SELECT * FROM users WHERE userName = ?`, 
+            [userName],
             (err, row) => {
               if (err) {
                 reject(err);  
@@ -183,15 +166,17 @@ export const singleBlogByUserAndBlogId = async (req, res) => {
         delete user.password
 
         if (!post) {
-          return res.status(404).send({
-            message: "Post not found for the given user and blog id",
+          return res.status(400).send({
+            message: "Post not found",
           });
         }
     
         return res.status(200).send({
           message: "Blog retrieved successfully",
-          data: post,
-          user: user,
+          data: {
+            user,
+            post
+          }
         });
       } catch (error) {
         return res.status(500).send({

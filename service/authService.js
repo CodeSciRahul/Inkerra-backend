@@ -67,10 +67,10 @@ export const loginService = async (payload) => {
   const db = new sqlite3.Database("./blog.db");
   try {
     const secret_key = process.env.JWT_Secret_key;
-    const { password, email, userName } = payload;
+    const { password, userName } = payload;
 
     //check if any field missing
-    if (!(password && (email || userName))) {
+    if (!(password && userName)) {
       throw new Error("All fields required");
     }
 
@@ -78,7 +78,7 @@ export const loginService = async (payload) => {
     const isUser = await new Promise((resolve, reject) => {
       db.get(
         "SELECT * FROM users WHERE email = ? OR userName = ?",
-        [email, userName],
+        [userName, userName],
         (err, row) => {
           if (err) reject(new Error(err));
           if (!row) return reject(new Error("user not exist"));

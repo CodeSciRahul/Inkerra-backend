@@ -24,7 +24,7 @@ import {resendVerificationEmailController } from "./controller/authController.js
 import { updatePicController,changePasswordController,updateProfileController } from "./controller/userProfileController.js";
 
 const sqlite3 = Sqlite3.verbose();
-const port = 3000;
+const port = 3001;
 
 const app = express();
 
@@ -45,10 +45,10 @@ db.run(`CREATE TABLE IF NOT EXISTS posts (
   title TEXT NOT NULL,
   content TEXT NOT NULL,
   blog_pic TEXT DEFAULT NULL,
-  user_id INTEGER,
+  userName TEXT NOT NULL,
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
   updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-  FOREIGN KEY (user_id) REFERENCES users(id) 
+  FOREIGN KEY (userName) REFERENCES users(userName) 
 )`);
 
 //table for user(Authentication) operation
@@ -81,7 +81,11 @@ db.run(
 );
 
 app.listen(port, () => {
-  console.log("server is runing on port 3000");
+  console.log("server is runing on port",port);
+});
+
+app.get("/", (req, res) => {
+  res.send("<h1>Server is running on port 3001</h1>");
 });
 
 //different route for authentication
