@@ -106,9 +106,9 @@ app.patch("/api/user/change-password", checkToken, changePasswordController);
 // Blog routes
 app.post("/api/blog", checkToken,upload.single('blog_pic'),postBlog);
 app.get("/api/blogs", getAllBlog);                              
-app.get("/api/user/:user_id/blogs", checkToken, AllBlogoFUser);  
-app.get("/api/user/:user_id/blog/:blog_id", singleBlogByUserAndBlogId); 
+app.get("/api/user/:userName/blogs", checkToken, AllBlogoFUser);  
+app.get("/api/user/:userName/blog/:blog_id", singleBlogByUserAndBlogId); 
 app.patch("/api/blog/:blog_id", checkToken, updateBlog);         
 app.delete("/api/blog/:blog_id", checkToken, deleteBlogByUserAndBlogId); 
-app.get("/api/user/:user_id", checkToken, getSingleUserController);
+app.get("/api/user/:userName", checkToken, getSingleUserController);
 
