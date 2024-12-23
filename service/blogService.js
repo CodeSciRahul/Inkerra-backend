@@ -53,7 +53,7 @@ export const postBlog = async (req, res) => {
       // Insert the new blog post
       const newPostId = await new Promise((resolve, reject) => {
         db.run(
-          "INSERT INTO posts (id, userName, title, content, blog_pic, hash) VALUES (?, ?, ?, ?, ?)",
+          "INSERT INTO posts (id, userName, title, content, blog_pic, hash) VALUES (?, ?, ?, ?, ?, ?)",
           [O_id, userName, title, content, url, JSON.stringify(hashArray)],
           function (err) {
             if (err) {
