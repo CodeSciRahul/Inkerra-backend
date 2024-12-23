@@ -8,7 +8,7 @@ import {
   postBlog,
   deleteBlogByUserAndBlogId,
   AllBlogoFUser,
-  singleBlogByUserAndBlogId,
+  singleBlogByUserAndBlogtitle,
   updateBlog,
 } from "./service/blogService.js";
 
@@ -45,6 +45,7 @@ db.run(`CREATE TABLE IF NOT EXISTS posts (
   title TEXT NOT NULL,
   content TEXT NOT NULL,
   blog_pic TEXT DEFAULT NULL,
+  hash TEXT DEFAULT NULL,
   userName TEXT NOT NULL,
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
   updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
@@ -107,7 +108,7 @@ app.patch("/api/user/change-password", checkToken, changePasswordController);
 app.post("/api/blog", checkToken,upload.single('blog_pic'),postBlog);
 app.get("/api/blogs", getAllBlog);                              
 app.get("/api/user/:userName/blogs", checkToken, AllBlogoFUser);  
-app.get("/api/user/:userName/blog/:blog_id", singleBlogByUserAndBlogId); 
+app.get("/api/user/:userName/blog/:title", singleBlogByUserAndBlogtitle); 
 app.patch("/api/blog/:blog_id", checkToken, updateBlog);         
 app.delete("/api/blog/:blog_id", checkToken, deleteBlogByUserAndBlogId); 
 app.get("/api/user/:userName", checkToken, getSingleUserController);

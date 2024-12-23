@@ -15,14 +15,34 @@ export const postBlog = async (req, res) => {
       const O_id = uuidv4();
       const file = req.file
 
-      const { title, content } = req.body;
+      const { title, content, hash} = req.body;
   
       // Check if title and content are provided
       if (!(title && content)) {
         return res.status(400).send({
-          message: "All fields are required"
+          message: "title and content required"
         })
       }
+      
+      //check titile is uniqe or not.
+      await new Promise((resolve, reject) => {
+        db.get(
+          "SELECT title FROM posts WHERE title = ? AND userName = ?", // Check for existing title
+          [title, userName],
+          (err, row) => {
+            if (err) {
+              reject(err); // Handle database errors
+            } else if (row) {
+              reject(new Error("Title already exists")); // Handle duplicate title
+            } else {
+              resolve(false); // Title is unique
+            }
+          }
+        );
+      });
+
+      // Parse hash into an array if provided
+      const hashArray = hash ? Array.isArray(hash) ? hash : [hash] : [];
 
       //upload blog picture on aws
       let url = null;
@@ -33,8 +53,8 @@ export const postBlog = async (req, res) => {
       // Insert the new blog post
       const newPostId = await new Promise((resolve, reject) => {
         db.run(
-          "INSERT INTO posts (id, userName, title, content, blog_pic) VALUES (?, ?, ?, ?, ?)",
-          [O_id, userName, title, content, url],
+          "INSERT INTO posts (id, userName, title, content, blog_pic, hash) VALUES (?, ?, ?, ?, ?)",
+          [O_id, userName, title, content, url, JSON.stringify(hashArray)],
           function (err) {
             if (err) {
               reject(err);  // Handle the error
@@ -62,7 +82,7 @@ export const postBlog = async (req, res) => {
   
       // Send the full blog post data in the response
       return res.status(201).send({
-        message: "Blog post successfully",
+        message: "Blog post created successfully",
         data: newPost,
       });
   
@@ -132,14 +152,14 @@ export const AllBlogoFUser = async (req, res) => {
   
 
 //reterive single blog for specific user and specific blog by blog id
-export const singleBlogByUserAndBlogId = async (req, res) => {
+export const singleBlogByUserAndBlogtitle = async (req, res) => {
     try {
-        const { userName, blog_id } = req.params
+        const { userName, title } = req.params
     
         const post = await new Promise((resolve, reject) => {
           db.get(
-          ` SELECT * FROM posts WHERE userName = ? AND id = ? `, 
-            [userName, blog_id],
+          ` SELECT * FROM posts WHERE userName = ? AND title = ? `, 
+            [userName, title],
             (err, row) => {
               if (err) {
                 reject(err);  
