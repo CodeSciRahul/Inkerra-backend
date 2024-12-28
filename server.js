@@ -28,8 +28,15 @@ const port = 3001;
 
 const app = express();
 
-app.use(bodyparser.json());
-app.use(cors());
+// Configure body-parser for large payloads
+app.use(bodyparser.json({ limit: "20mb" })); // JSON payload limit
+app.use(bodyparser.urlencoded({ limit: "20mb", extended: true })); // URL-encoded payload limit
+
+app.use(cors({
+  origin: "http://localhost:3000", // Allow requests only from this origin
+  methods: ["GET", "POST", "PUT", "DELETE"],
+  allowedHeaders: ["Content-Type", "Authorization"]
+}));
 
 const db = new sqlite3.Database("./blog.db", (err) => {
   if (err) return console.error("error from data base", err);
