@@ -30,6 +30,7 @@ LIMIT ? OFFSET ?;
         if (err) {
           return reject(new Error(err?.message));
         }
+        console.log(rows)
 
         const transformedData = rows?.map((row) => ({
           user: {
@@ -44,6 +45,7 @@ LIMIT ? OFFSET ?;
             title: row.title,
             content: row.content,
             blog_pic: row.blog_pic,
+            hashs: row.hash,
             created_at: row.created_at,
             updated_at: row.updated_at,
           },

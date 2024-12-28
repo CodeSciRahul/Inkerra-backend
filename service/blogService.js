@@ -79,6 +79,7 @@ export const postBlog = async (req, res) => {
           }
         );
       });
+      console.log(newPost);
   
       // Send the full blog post data in the response
       return res.status(201).send({
@@ -99,7 +100,6 @@ export const postBlog = async (req, res) => {
 export const getAllBlog = async (req, res) => {
   try {
     const {pageNo, limit} = req.query
-    console.log("pageNo and limit", pageNo, limit);
     const {data, pagination} = await getPaginationResult(pageNo, limit)
     const response = {
       data,

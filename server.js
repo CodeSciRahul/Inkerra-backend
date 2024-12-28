@@ -33,8 +33,8 @@ app.use(bodyparser.json({ limit: "20mb" })); // JSON payload limit
 app.use(bodyparser.urlencoded({ limit: "20mb", extended: true })); // URL-encoded payload limit
 
 app.use(cors({
-  origin: "http://localhost:3000", // Allow requests only from this origin
-  methods: ["GET", "POST", "PUT", "DELETE"],
+  origin: ["http://localhost:3000", "https://inkerra-frontend.vercel.app"], // Allow requests only from this origin
+  methods: ["GET", "POST", "PUT", "DELETE", "PATCH"],
   allowedHeaders: ["Content-Type", "Authorization"]
 }));
 
