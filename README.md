@@ -2,6 +2,9 @@
 
 This project is built using **Node.js** and **Express.js**, with **SQLite** as the database and **AWS S3** for image uploads. The project also incorporates **Nodemailer** for email functionality and **JWT** for authentication and authorization.
 
+#live Url
+https://inkerra-backend.onrender.com/
+
 ## Features
 - User authentication and authorization (signup, login, email verification, password reset).
 - User profile management (update profile, change profile and background pictures).
